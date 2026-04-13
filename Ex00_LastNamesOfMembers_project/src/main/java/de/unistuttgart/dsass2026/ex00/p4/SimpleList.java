@@ -165,14 +165,4 @@ public class SimpleList<T extends Comparable<T>> implements ISimpleListIterable<
         }
     }
 
-    /**
-     * Returns a string representation of the list in the form {@code [e0, e1, ...]}.
-     *
-     * @return string representation of this list
-     */
-    @Override
-    public String toString() {
-        return list.toString();
-    }
-
 }
