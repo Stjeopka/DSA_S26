@@ -4,13 +4,18 @@ name: DSA Project CI
 #
 #  • pull_request → main  : compile + test only the changed project(s).
 #  • push → main          : (i.e. a PR was merged) compile, test, then run the
-#                           submission script and upload the ZIP as an artifact.
+#                           submission script and publish the ZIP as a Release.
 #
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
+
+# ── Permissions ───────────────────────────────────────────────────────────────
+# contents:write lets the submit job create GitHub Releases and upload assets.
+permissions:
+  contents: write
 
 jobs:
   # ── 1. Detect which project(s) actually changed ─────────────────────────────
@@ -104,8 +109,12 @@ jobs:
 
   # ── 3. Submit (runs only after a merge into main) ────────────────────────────
   #
-  #  Executes submit.sh to produce the ZIP, then uploads it as a GitHub Actions
-  #  artifact that can be downloaded from the workflow run page.
+  #  Executes submit.sh to produce the ZIP, then creates a GitHub Release and
+  #  attaches the ZIP so it is permanently downloadable from the Releases page.
+  #
+  #  Tag format:  <ExNN>-<short-sha>   e.g.  Ex00-b47a939
+  #  This ensures each merge gets its own release even if the same exercise is
+  #  updated multiple times.
   #
   #  Guards:
   #    • Only on push events (not PRs).
@@ -138,8 +147,6 @@ jobs:
           cache: "maven"
 
       # ── yq (required by submit.sh to parse co-authers.yaml) ──────────────────
-      # The system package on Ubuntu runners may be outdated; install from snap
-      # or use the pip version for reliability.
       - name: Install yq
         run: |
           sudo wget -qO /usr/local/bin/yq \
@@ -152,18 +159,42 @@ jobs:
       - name: Run submit.sh for ${{ matrix.project }}
         run: bash submit.sh "${{ matrix.project }}"
 
-      # ── Upload the generated ZIP as a workflow artifact ───────────────────────
-      # The ZIP lands in submissions/ as produced by submit.sh.
-      # Artifact name includes the project name so parallel matrix jobs don't
-      # overwrite each other.
-      - name: Upload submission ZIP
-        uses: actions/upload-artifact@v4
+      # ── Determine ZIP path and release metadata ───────────────────────────────
+      # Resolve the exact filename produced by submit.sh (derived from
+      # co-authers.yaml) and build a unique release tag from the exercise number
+      # and the short commit SHA.
+      - name: Resolve ZIP and build release tag
+        id: meta
+        run: |
+          ZIP_PATH=$(ls submissions/*.zip | head -n1)
+          ZIP_NAME=$(basename "$ZIP_PATH")
+
+          # Extract exercise prefix, e.g. "Ex00" from "Ex00_MoserMusterfrau_project.zip"
+          EX_PREFIX=$(echo "$ZIP_NAME" | grep -oP '^Ex\d+')
+
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          TAG="${EX_PREFIX}-${SHORT_SHA}"
+
+          echo "zip_path=$ZIP_PATH"   >> "$GITHUB_OUTPUT"
+          echo "zip_name=$ZIP_NAME"   >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG"             >> "$GITHUB_OUTPUT"
+          echo "ex_prefix=$EX_PREFIX" >> "$GITHUB_OUTPUT"
+
+      # ── Create GitHub Release and attach the ZIP ──────────────────────────────
+      # softprops/action-gh-release handles tag creation, release creation, and
+      # asset upload in one step. The ZIP is permanently visible on the repo's
+      # Releases page and can be downloaded directly without logging in.
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: submission-${{ matrix.project }}
-          # Glob picks up whatever submit.sh created (name is derived from
-          # co-authers.yaml content, e.g. Ex00_MoserMusterfrau_project.zip).
-          path: submissions/*.zip
-          # Fail the step if no ZIP was produced.
-          if-no-files-found: error
-          # Keep artifacts for 90 days (GitHub's maximum for public repos).
-          retention-days: 90
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: "${{ steps.meta.outputs.ex_prefix }} Submission (${{ steps.meta.outputs.tag }})"
+          body: |
+            Automated submission produced on merge to `main`.
+
+            **Project:** `${{ matrix.project }}`
+            **Commit:** ${{ github.sha }}
+          files: ${{ steps.meta.outputs.zip_path }}
+          # Make the release a non-pre-release so it shows as "Latest" on the
+          # Releases page. Set prerelease: true if you prefer otherwise.
+          prerelease: false
