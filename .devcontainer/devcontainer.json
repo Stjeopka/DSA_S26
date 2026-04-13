@@ -1,0 +1,37 @@
+{
+  "name": "DSA Java 17",
+  "image": "mcr.microsoft.com/devcontainers/java:17",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17",
+      "installMaven": "true"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-java-test",
+        "actboy168.tasks"
+      ],
+      "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic",
+        "tasks.statusbar": {
+          "Maven: Compile (select project)": {
+            "label": "$(tools) Compile",
+            "tooltip": "Select project and compile"
+          },
+          "Maven: Test (select project)": {
+            "label": "$(beaker) Test",
+            "tooltip": "Select project and run tests"
+          },
+          "Submit: Test & Zip (select project)": {
+            "label": "$(package) Submit",
+            "tooltip": "Compile + Test + ZIP for submission"
+          }
+        }
+      }
+    }
+  },
+  "postCreateCommand": "sudo apt-get update -qq && sudo apt-get install -y -qq fzf && sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq && echo 'Dev container ready. cd into any Ex*_project folder and run: mvn compile / mvn test'"
+}

@@ -1,0 +1,6 @@
+{
+    "java.test.config": {
+        "vmArgs": ["-Dfile.encoding=UTF-8"],
+        "args": ["--details=verbose", "--details-theme=ascii"]
+    }
+}

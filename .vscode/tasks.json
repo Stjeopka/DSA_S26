@@ -1,0 +1,53 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Maven: Compile (select project)",
+            "type": "shell",
+            "command": "cd '${workspaceFolder}' && selected=$(ls -d Ex*_project/ 2>/dev/null | sed 's|/||' | fzf --prompt='Select project> ' || true) && [ -n \"$selected\" ] && cd \"$selected\" && mvn compile",
+            "group": "build",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Maven: Test (select project)",
+            "type": "shell",
+            "command": "cd '${workspaceFolder}' && selected=$(ls -d Ex*_project/ 2>/dev/null | sed 's|/||' | fzf --prompt='Select project> ' || true) && [ -n \"$selected\" ] && cd \"$selected\" && mvn test",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Maven: Compile Current Project",
+            "type": "shell",
+            "command": "cd \"${workspaceFolder}/$(echo '${relativeFile}' | cut -d'/' -f1)\" && mvn compile",
+            "group": "build",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Submit: Test & Zip (select project)",
+            "type": "shell",
+            "command": "'${workspaceFolder}/submit.sh'",
+            "group": "none",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "focus": true
+            }
+        }
+    ]
+}
