@@ -5,12 +5,20 @@ name: DSA Project CI
 #  • pull_request → main  : compile + test only the changed project(s).
 #  • push → main          : (i.e. a PR was merged) compile, test, then run the
 #                           submission script and publish the ZIP as a Release.
+#  • workflow_dispatch    : manual release run from the GitHub Actions UI for a
+#                           specific project, without diff-based change checks.
 #
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      project:
+        description: "Top-level project directory to release, e.g. Ex00_LastNamesOfMembers_project"
+        required: true
+        type: string
 
 # ── Permissions ───────────────────────────────────────────────────────────────
 # contents:write lets the submit job create GitHub Releases and upload assets.
@@ -43,6 +51,23 @@ jobs:
       - name: Detect changed projects
         id: detect
         run: |
+          # Manual workflow runs bypass git diff detection completely.
+          # The selected project from the Actions UI is used directly.
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            PROJECT="${{ inputs.project }}"
+
+            if [[ ! -d "$PROJECT" || ! -f "$PROJECT/pom.xml" ]]; then
+              echo "Invalid project directory: $PROJECT"
+              exit 1
+            fi
+
+            PROJECTS="[\"$PROJECT\"]"
+            echo "Manual run selected project: $PROJECTS"
+            echo "projects=$PROJECTS" >> "$GITHUB_OUTPUT"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           # Choose the correct base / head pair depending on the event type.
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             BASE="${{ github.event.pull_request.base.sha }}"
@@ -117,16 +142,18 @@ jobs:
   #  updated multiple times.
   #
   #  Guards:
-  #    • Only on push events (not PRs).
-  #    • Only when at least one relevant project changed.
+  #    • Runs automatically on pushes to main when a relevant project changed.
+  #    • Can also be started manually from the Actions UI via workflow_dispatch.
   # ─────────────────────────────────────────────────────────────────────────────
   submit:
     name: "Submit — ${{ matrix.project }}"
     needs: detect-changes
     if: |
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      needs.detect-changes.outputs.has_changes == 'true'
+      (
+        github.event_name == 'push' &&
+        github.ref == 'refs/heads/main' &&
+        needs.detect-changes.outputs.has_changes == 'true'
+      ) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     strategy:
@@ -190,11 +217,13 @@ jobs:
           tag_name: ${{ steps.meta.outputs.tag }}
           name: "${{ steps.meta.outputs.ex_prefix }} Submission (${{ steps.meta.outputs.tag }})"
           body: |
-            Automated submission produced on merge to `main`.
+            Automated submission release.
 
-            **Project:** `${{ matrix.project }}`
-            **Commit:** ${{ github.sha }}
+            Project: ${{ matrix.project }}
+            Commit: ${{ github.sha }}
+            Trigger: ${{ github.event_name }}
           files: ${{ steps.meta.outputs.zip_path }}
-          # Make the release a non-pre-release so it shows as "Latest" on the
-          # Releases page. Set prerelease: true if you prefer otherwise.
+          # If the same release is triggered manually again for the same commit,
+          # replace the existing asset instead of failing.
+          overwrite_files: true
           prerelease: false
