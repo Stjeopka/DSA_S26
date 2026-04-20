@@ -2,5 +2,11 @@
     "java.test.config": {
         "vmArgs": ["-Dfile.encoding=UTF-8"],
         "args": ["--details=verbose", "--details-theme=ascii"]
-    }
+    },
+    "java.project.sourcePaths": [
+        "Ex00_LastNamesOfMembers_project/src/main/java",
+        "Ex00_LastNamesOfMembers_project/src/test/java",
+        "Ex01_LastNamesOfMembers_project/src/main/java",
+        "Ex01_LastNamesOfMembers_project/src/test/java"
+    ]
 }
