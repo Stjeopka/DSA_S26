@@ -7,6 +7,11 @@
       "installMaven": "true"
     }
   },
+  "mounts": [
+    "source=${localEnv:USERPROFILE}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,readonly",
+    "source=${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh-host,type=bind,readonly"
+  ],
+  "postStartCommand": "bash -lc \"mkdir -p /home/vscode/.ssh && chmod 700 /home/vscode/.ssh && if [ -d /home/vscode/.ssh-host ]; then cp -r /home/vscode/.ssh-host/. /home/vscode/.ssh/; fi && find /home/vscode/.ssh -maxdepth 1 -type f -name '*.pub' -exec chmod 644 {} ';' && for f in /home/vscode/.ssh/known_hosts /home/vscode/.ssh/known_hosts.old; do if [ -f $f ]; then chmod 644 $f; fi; done && find /home/vscode/.ssh -maxdepth 1 -type f ! -name '*.pub' ! -name 'known_hosts' ! -name 'known_hosts.old' -exec chmod 600 {} ';'\"",
   "customizations": {
     "vscode": {
       "extensions": [
