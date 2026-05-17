@@ -58,6 +58,68 @@ public class AVLTree<K extends Comparable<K>> implements IAVLTree<K> {
         return n;
     }
 
+    @Override
+    public void remove(K k) {
+        root = removeRecursive(root, k);
+    }
+
+    private AVLNode<K> removeRecursive(AVLNode<K> n, K k) {
+        if (n == null)
+            return null;
+
+        int cmp = n.getKey().compareTo(k);
+        if (cmp < 0) {
+            n.setRight(removeRecursive(n.getRight(), k));
+        } else if (cmp > 0) {
+            n.setLeft(removeRecursive(n.getLeft(), k));
+        } else {
+            if (n.getLeft() == null)
+                return n.getRight();
+            if (n.getRight() == null)
+                return n.getLeft();
+
+            AVLNode<K> successor = leftmostNode(n.getRight());
+            n.setKey(successor.getKey());
+            n.setRight(removeRecursive(n.getRight(), successor.getKey()));
+        }
+
+        n.updateHeight();
+        return rebalance(n);
+    }
+
+    private AVLNode<K> leftmostNode(AVLNode<K> n) {
+        AVLNode<K> current = n;
+        while (current.getLeft() != null)
+            current = current.getLeft();
+        return current;
+    }
+
+    @Override
+    public AVLNode<K> rebalance(AVLNode<K> n) {
+        if (n == null)
+            return null;
+
+        int balance = n.getBalance();
+
+        if (balance == 2) {
+            if (n.getLeft().getBalance() >= 0) {
+                return rotateRight(n);
+            }
+            n.setLeft(rotateLeft(n.getLeft()));
+            return rotateRight(n);
+        }
+
+        if (balance == -2) {
+            if (n.getRight().getBalance() <= 0) {
+                return rotateLeft(n);
+            }
+            n.setRight(rotateRight(n.getRight()));
+            return rotateLeft(n);
+        }
+
+        return n;
+    }
+
 
 
     private AVLNode<K> rotateLeft(AVLNode<K> n) {
